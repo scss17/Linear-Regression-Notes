@@ -72,7 +72,7 @@ s_plot01 + geom_point(aes(y = calls_per_hour))
 s_plot01 + geom_point(aes(y = time_per_call))
 
 # Create save simulated data set
-write.csv(x = call_center, file = "data/call_center_regression")
+write.csv(x = call_center, file = "data/call_center_regression.csv")
 
 
 
