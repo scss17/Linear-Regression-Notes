@@ -1,1 +1,9 @@
-# Linear-Regression-Notes
+# Introduction
+
+The aim of this notebook is to provide a guideline for applying **correlation analysis** and **linear regression models** to your data from a statistical approach. Hopefully, my notes will be helpful for those of you who are starting with data analysis to grasp the theory, application, and interpretation and, for the more experienced ones, as a little review. It is worth mentioning that linear regression is a statistical method that is used in both statistics and data science. However, there are some differences in how it is used and applied in these two fields.
+
+-   **In statistics**, linear regression is used to model the relationship between two or more variables and to make inferences about the population parameters. The emphasis is on understanding the relationship between the variables and testing hypotheses about the nature of that relationship. In this context, statistical assumptions about the data, such as normality of errors and independence of observations, are carefully examined to ensure the validity of the model. Here the focus is often on analyzing small to moderate-sized datasets with a limited number of variables.
+
+-   **In data science**, linear regression is often used as a predictive modeling tool. The focus is on building a model that can accurately predict the value of a dependent variable based on one or more independent variables. The emphasis is on finding the best model that fits the data, rather than making statistical inferences. This implies that the final model might not be easily interpretable. Here the focus is often on analyzing large and complex datasets with many variables.
+
+Since my background is in statistics, I am going to start there. I am going to show the procedure of the linear regression process in the traditional way (so to speak) which I have learned and applied in my work.
