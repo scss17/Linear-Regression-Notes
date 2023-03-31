@@ -1,0 +1,109 @@
+---
+title: "linear-regression"
+format:
+  html:
+    toc: true
+    html-math-method: katex
+    css: styles.css
+---
+
+# Introduction
+
+The aim of this notebook is to provide a guideline for applying **correlation analysis** and **linear regression models** to your data from a statistical approach. Hopefully, my notes will be helpful for those of you who are starting with data analysis to grasp the theory, application, and interpretation and, for the more experienced ones, as a little review. It is worth mentioning that linear regression is a statistical method that is used in both statistics and data science. However, there are some differences in how it is used and applied in these two fields.
+
+-   **In statistics**, linear regression is used to model the relationship between two or more variables and to make inferences about the population parameters. The emphasis is on understanding the relationship between the variables and testing hypotheses about the nature of that relationship. In this context, statistical assumptions about the data, such as normality of errors and independence of observations, are carefully examined to ensure the validity of the model. Here the focus is often on analyzing small to moderate-sized datasets with a limited number of variables.
+
+-   **In data science**, linear regression is often used as a predictive modeling tool. The focus is on building a model that can accurately predict the value of a dependent variable based on one or more independent variables. The emphasis is on finding the best model that fits the data, rather than making statistical inferences. This implies that the final model might not be easily interpretable. Here the focus is often on analyzing large and complex datasets with many variables.
+
+Since my background is in statistics, I am going to start there. I am going to show the procedure of the linear regression process in the traditional way (so to speak) which I have learned and applied in my work. If you already have a good understanding of how linear regression works in statistics, learning how to apply it in machine learning should not be too difficult. In fact, many of the same principles apply to both contexts. The following image shows the correlation and regression process overview for simple linear regression.
+
+# Theory
+
+## Correlation Coefficient Overview
+
+**Correlation** is a term used to indicate whether there is a relationship between the values of different measurements. - A **positive correlation** means that high values of one measurement are associated with higher values of the other measurement (both rise together). So, the two variables are said t be directly proportional. - A **negative correlation** means that higher values of one measurement are associated with lower values of another (as one goes up, the other goes down). So, the two variables are said t be inversely proportional. - It is extremely important to highlight that correlation itself **does not** imply a cause-effect relationship. If you want to draw cause-and-effect relationships you need to run an experiment (DOX). - Sometimes an apparent correlation can be coincidence. - Other times, the two variables are both related to an underlying cause --- called a **lurking variables**--- that is not included in your analysis. On the other hand, a **confounding variable** is a variable that is not among the explanatory or response variables and yet may influence the interpretation of relationships among those variables.
+
+A **lurking variable** is a variable that is hidden or not included in an analysis, but impacts the relationship being analyzed. Some lurking variables hide real relationships, while others can make a false relationship appear to exist. Either way, lurking variables create misleading study results. It's very important to identify what lurking variables in statistics.
+
+-   In **experimental studies**, all possible variables should be controlled for in the experiment design phase in order to reduce or eliminate the possibility of a lurking variable.
+-   In **an observational study**, simply being aware of the possibility of lurking variables and trying to identify them is a necessary step before interpreting the results.
+
+To get the correlation coefficient between two variables we need to calculate the covariance between both x and y and the standard deviation of each x and y. Therefore, Pearson's correlation coefficient $\rho_{xy}$ is computed by dividing the covariance by the product of the standard deviation of each data set.
+
+$$\large \rho_{xy} = \frac{r_{xy}}{s_x s_y}, \large$$
+
+-   When $\rho_{xy} =-1$, a perfect negative linear relationship exists.
+-   Any result less than zero shows a negative relationship, and the relationship gets weaker the nearer to zero the coefficient gets, until $\rho_{xy} = 0$, showing no relationship at all.
+-   As the coefficient increases above zero, a positive relationship is shown, until $\rho_{xy} = 1$, which is a perfect positive linear relationship.
+-   If you see a correlation coefficient \$ \|r\| \ge 0.65 \$ you can conclude that the linear relationship between the variables is strong. Nevertheless, we're looking for \$ r \$ to be as closer to \$ \|1\| \$ as possible.
+
+## Covariance and Standard Deviation
+
+The **covariance** expresses how much two numeric variables "change together" and the nature of that relationship, whether it is positive or negative. Suppose for $n$ individuals you have a sample of observations for two variables, labeled $x = \{x_1, x_2, \dots, x_n\}$ and $y = \{y_1, y_2, \dots, y_n\}$ where $x_i$ corresponds to $y_i$ for $i = 1,2, \dots, n$. The sample covariance $r_{xy}$ is computed with the following:
+
+$$\large r_{xy} = \frac{1}{n-1} \sum_{i-1}^{n} (x_i - \bar{x})(y_i - \bar{y}) \large$$
+
+-   The problem with covariance is that it measures the total variation of two random variables from their expected values, so we can only gauge the direction of the relationship. That's why covariance is used as a middle calculation.
+-   Note that the order is not important such as \$ Cov(x,y) = Cov(y,x) \$
+
+On the other hand, the **standard deviation** is simply the square root of the variance. Since the variance is a representation of the average squared distance, the standard deviation provides a value interpretable with respect to the scale of the original observations.
+
+$$\large s_x = \sqrt{s^2} = \sqrt{\frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2}\large $$
+
+-   The standard deviation and the mean together can tell you where most of the values in your frequency distribution lie if they follow a normal distribution.
+
+-   I like to think of the mean as your best bet (if the distribution is not skewed), and the standard deviation as the degree of doubt. A good rule of thumb is the 68-95-99.7 rule. It tells you where your values lie:
+
+    -   Around 68% of scores are within 1 standard deviation of the mean,
+    -   Around 95% of scores are within 2 standard deviations of the mean,
+    -   Around 99.7% of scores are within 3 standard deviations of the mean.
+
+## Simple Linear Regression Overview
+
+The purpose of a linear regression model is to come up with a mathematical function that estimates the mean of one variable given a particular value of another variable. The variable of interest is known as the response variable (the outcome, the prediction or dependent variable is also possible) and the other is the explanatory variable (the input, the predictor, or independent variable is also possible). Assume you're looking to determine the value of response variable Y given the value of an explanatory variable X. The simple linear regression model states that the value of a response is expressed as the following equation:
+
+$$ \large Y_i|X = \beta_0 + \beta_1 X + \epsilon $$
+
+Where:
+
+-   The intercept $\beta_0$ is interpreted as the expected value of the response variable when the predictor is zero. **Sometimes this value has no practical interpretation, especially when it's negative**.
+-   The slope, $\beta_1$ is interpreted as the change in the mean response for each one-unit increase in the predictor.
+    -   When the slope is positive means the more of X the more of Y there will be.
+    -   When the slope is negative means the more of X the less of Y there will be.
+    -   When the slope is zero, this implies that the predictor has no effect on the value of the response.
+    -   The more extreme the value of $\beta_1$ (that is, away from zero), the steeper the increasing or decreasing line becomes.
+
+There are several assumptions for the linear regression model to be appropriate for the data and that the results obtained from the analysis are reliable. In other words, the validity of the conclusions you can draw based on the model is critically dependent on the assumptions made about, which are defined as follows:
+
+For the variables:
+
+-   **Linearity**: The relationship between the **independent** and **dependent** variables is linear, meaning that the change in the dependent variable is proportional to the change in the independent variable(s).
+
+-   **No Multicollinearity**: There should be no high correlation between the **independent** variables. This assumption is important because if there is high correlation between the independent variables, it becomes difficult to estimate the effect of each variable separately.
+
+For the residuals:
+
+-   **Homoscedasticity**: The variance of the errors is constant across all levels of the independent variables. This assumption is also called the constant variance assumption.
+
+-   **Normality**: The errors are normally distributed. This means that the distribution of the errors should be a bell-shaped curve centered around zero. Therefore: \$ \epsilon \sim N(0, \sigma) \$
+
+# Data
+
+A fictional call center is interested in knowing the relationship between the number of personnel and some variables that measure their performance such as average answer time, average calls per hour, and average time per call. Data were simulated to represent 200 shifts. The project is focusing on the answer time for telephone calls to the center, the time spent on each call, and the incoming call volume. According to experience, a potential predictor might be the number of personnel available in a shift. We can visualize the process with the following diagram.
+
+```{r libraries, warning = FALSE, message = FALSE}
+# Load libaries
+library(ggplot2)
+library(GGally)
+library(dplyr)
+library(readr)
+library(MASS)
+options(warn = -1)
+
+# Import data set
+call_center <- read_csv(file = "data/call_center_regression.csv",
+                        show_col_types = FALSE)
+
+# Print the structure of the 'call_center' data frame
+str(call_center)
+```
