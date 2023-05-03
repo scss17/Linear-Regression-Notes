@@ -92,7 +92,7 @@ For the residuals:
 A fictional call center is interested in knowing the relationship between the number of personnel and some variables that measure their performance such as average answer time, average calls per hour, and average time per call. Data were simulated to represent 200 shifts. The project is focusing on the answer time for telephone calls to the center, the time spent on each call, and the incoming call volume. According to experience, a potential predictor might be the number of personnel available in a shift. We can visualize the process with the following diagram.
 
 ```{r libraries, warning = FALSE, message = FALSE}
-# Load libaries
+# Load libraries
 library(ggplot2)
 library(GGally)
 library(dplyr)
