@@ -9,19 +9,293 @@ format:
 
 # Introduction
 
-The aim of this notebook is to provide a guideline for applying **correlation analysis** and **linear regression models** to your data from a statistical approach. Hopefully, my notes will be helpful for those of you who are starting with data analysis to grasp the theory, application, and interpretation and, for the more experienced ones, as a little review. It is worth mentioning that linear regression is a statistical method that is used in both statistics and data science. However, there are some differences in how it is used and applied in these two fields.
+The aim of this notebook is to provide a guideline for applying **correlation analysis** and **linear regression models** to your data from a inference approach. Hopefully, my notes will be helpful for those of you who are starting with data analysis to grasp the theory, application, and interpretation and, for the more experienced ones, as a little review. It is worth mentioning that linear regression is a statistical method that is used in both statistics and data science. However, there are some differences in how it is used and applied in these two fields.
 
 -   **In statistics**, linear regression is used to model the relationship between two or more variables and to make inferences about the population parameters. The emphasis is on understanding the relationship between the variables and testing hypotheses about the nature of that relationship. In this context, statistical assumptions about the data, such as normality of errors and independence of observations, are carefully examined to ensure the validity of the model. Here the focus is often on analyzing small to moderate-sized datasets with a limited number of variables.
 
 -   **In data science**, linear regression is often used as a predictive modeling tool. The focus is on building a model that can accurately predict the value of a dependent variable based on one or more independent variables. The emphasis is on finding the best model that fits the data, rather than making statistical inferences. This implies that the final model might not be easily interpretable. Here the focus is often on analyzing large and complex datasets with many variables.
 
-Since my background is in statistics, I am going to start there. I am going to show the procedure of the linear regression process in the traditional way (so to speak) which I have learned and applied in my work. If you already have a good understanding of how linear regression works in statistics, learning how to apply it in machine learning should not be too difficult. In fact, many of the same principles apply to both contexts. The following image shows the correlation and regression process overview for simple linear regression.
+Since my background is in statistics, I am going to start there. I am going to show the procedure of the linear regression process in the traditional way (so to speak) which I have learned and applied in my work. If you already have a good understanding of how linear regression works in statistics, learning how to apply it in machine learning should not be too difficult. In fact, many of the same principles apply to both contexts. The following image shows the correlation and regression process overview for simple linear regression. The [theory](#Theory) at the end of this notebook.
 
-# Theory
+# Data
+
+A HelloHub Call Center is interested in knowing the relationship between the number of personnel and some variables that measure their performance such as average answer time, average calls per hour, and average time per call. Data were simulated to represent 200 shifts. The project is focusing on the answer time for telephone calls to the center, the time spent on each call, and the incoming call volume. According to experience, a potential predictor might be the number of personnel available in a shift. First we need to load the libraries and data.
+
+```{r libraries, warning = FALSE, message = FALSE}
+# Load libraries
+library(ggplot2)
+library(GGally)
+library(dplyr)
+library(corrplot)
+library(readr)
+library(MASS)
+options(warn = -1)
+
+# Import data set
+call_center <- read_csv(file = "data/call_center_regression.csv",
+                        show_col_types = FALSE)
+
+```
+
+# Exploratory Data Analysis
+
+First, we need to understand how the dataset is structured and how variables are distributed. I will use two functions that come in handy to perform this task: `glimpse` and `summary`.
+
+-    `glimpse`: it is a useful tool for quickly understanding the structure and contents of a data frame. It returns the dimension of a dataframe, the column names, data types and, the first rows of each column.
+
+-    `summary`: This function returns what is called the five-summary statistics if the variable is numeric. This consists of five values: the minimum value, the first quartile (Q1), the median (Q2), the third quartile (Q3), and the maximum value. The five-number summary is useful for describing the center, spread, and shape of a dataset. Here is how the five-number summary is calculated:
+
+        - **Minimum**: The smallest value in the dataset.
+        - **Q1**: The value that is greater than or equal to 25% of the data points in the dataset.
+        - **Median (Q2)**: The value that is greater than or equal to 50% of the data points in the dataset.
+        - **Q3**: The value that is greater than or equal to 75% of the data points in the dataset.
+        - **Maximum**: The largest value in the dataset.
+
+**Note**: `summary()` function in R does not always report the global minimum and maximum values of a data set. Instead, it reports the minimum and maximum values within a *range*, which is defined as `Q1 - 1.5 * IQR` to `Q3 + 1.5 * IQR`. This is useful to identify outliers.
+
+```{r EDA}
+# Print the structure of the 'call_center' data frame
+glimpse(call_center)
+
+# Calculate the five-summary statistics of the 'call_center' data frame
+summary(call_center)
+```
+
+**Data structure and summary insights**
+
+-   On one hand, we can observe that `call_canter` data frame consisted of 200 observations and 4 variables an all variables are numeric. This is significant because some visualization or analytical tools can be applied according to the data type we have.
+
+-   On the other hand, since all variables contain numeric values the function summary has returned the five-summary statistics. Here we get a first understanding of how the data is distributed.
+
+    -   The first I notice is that both the **mean** and **median** are relatively close together, which suggests that the distribution might be symmetric. However, keep in mind that this observation alone may not be sufficient to conclude the shape of the distribution; for that purpose, I will use **histograms**.
+
+    -   Secondly, each variable, since they have different measurement units, runs between different ranges. This holds considerable importance since we cannot compare them directly, for instance in a boxplot.
+
+We are then interested in identifying the shape of the distribution: **Histograms** can help us quickly determine whether the distribution of the data is symmetric, skewed, or has multiple peaks. This information can be useful for determining if linear regression is an appropriate statistical test and model. Remember that one assumption of linear regression is that the errors are normally distributed, which can be related to the shape of the distribution of the variables.
+
+**Note**: We should consider writing a function whenever we've copied and pasted a block of code more than twice. As we will create four histograms with the same characteristics, I will create a function to save us from writing so much code.e.
+
+```{r histogram-function}
+# Create a function to plot a histogram
+plot_histogram <- function(data, var_name, title = "Histogram", legend = FALSE) {
+    
+    # Create the first histogram plot
+    hist(x = data[[var_name]], freq = FALSE, col = "lightgray",
+         main = title,
+         xlab = var_name,
+         ylab = "Density")
+    
+    # Add the density line to the first plot
+    lines(density(data[[var_name]]), col = "blue", lwd = 2)
+
+    # Add vertical lines for the mean and median to the first plot
+    abline(v = mean(data[[var_name]]), col = "red", lwd = 2)
+    abline(v = median(data[[var_name]]), col = "orange", lwd = 2)
+    
+    if (legend) {
+        
+        # Add a legend to the first plot 
+        legend("bottomleft", legend = c("Density", "Mean", "Median"), 
+               col = c("blue", "red", "tomato"), lwd = 2,
+               inset = c(0.05, 0.05), bg = "white")
+        
+    }
+}
+
+```
+
+```{r plot-histograms, fig.width = 15, fig.height = 5}
+# Divide the plotting region into four subplots
+par(mfrow = c(1,4))
+
+# Create the first histogram plot
+plot_histogram(data = call_center, var_name = "personnel", title = "Histogram of Personnel", legend = TRUE)
+plot_histogram(data = call_center, var_name = "answer_time", title = "Histogram of Answer Time", legend = FALSE)
+plot_histogram(data = call_center, var_name = "calls_per_hour", title = "Histogram of Calls per Hour", legend = FALSE)
+plot_histogram(data = call_center, var_name = "time_per_call", title = "Histogram of Time per Call", legend = FALSE)
+```
+
+**Histogram Analysis**
+
+We plotted four histograms corresponding to every variable in the data frame with three lines: **density line** [(represented in blue)]{style="color:blue"} , the **mean** [(red line)]{style="color:red"} and the **median** [(orange line)]{style="color:orange"}. In general, we want to infer the following points from a histogram:
+
+-   **Shape of the distribution**: For this, the density line will come in handy. A symmetric distribution will have a bell-shaped density line:
+
+    -   That is the case of `time_per_call` and `calls_per_hour`
+
+    -   In contrast, `personnel` seems to follow a uniform distribution. This distribution suggests that the data is evenly distributed across the range of values, in other words, it means that all values are equally likely to occur. Since the number of personnel is something they can control (to some degree at least) we can expect this result.
+
+-   **Central tendency** For this, we need to compare the **mean**, the **median** and the **density** line. The density line is highest at the point of highest probability density, which is usually around the **mean** of the data. At the same time, the red and orange lines have to be close together. All variables seem to be symmetric, even though `anwer_time` contains two peaks. I will address this in the next point.
+
+-   **Bimodality**: If the density line has two distinct peaks, this suggests that the data may have two underlying subpopulations with different central tendencies or spreads. That is the case of `asnwer_time`. This suggests that there might be two groups in the population (it can be sex, the type of call being received, or the experience level of the agent handling the call for example) that is actually the driving force behind the bimodal distribution. It's important to examine the data more closely to identify what these subpopulations may be and what they represent. For now, we don't have any further information, so we will not consider it.
+
+# Graph the Data
+
+In this section, I am going to use the function `ggpairs`. This function creates a matrix of scatter plots and density lines for multiple variables in a data set. From a scatter plot we can conclude the relationship between two variables, if any, the strength and direction of the correlation.
+
+The key aspects to focus on in the matrix are:
+
+-    Scatter plots provide a quick and convenient way to visually analyze the relationship between two variables.
+
+-   They are notably useful for identifying potential patterns in the data.
+
+-   Scatter plots help us determine the strength and direction of the relationship between the two variables.
+
+```{r plot-scatterplot-matrix}
+# Define a function to create the lower triangle plots
+lowerFn <- function(data, mapping, method = "lm", ...) {
+  
+  # Create a ggplot object with the given data and mapping and a regression line layer
+  p <- ggplot(data = data, mapping = mapping) +
+    geom_point(alpha = 0.8) +
+    geom_smooth(method = method, color = "red", ...)
+  
+  # Return the plot object
+  return(p)
+}
+
+# Create the ggpairs plot with the specified settings
+ggpairs(call_center, 
+        
+        # Use density plots and box plots in the upper triangle and regression lines in the lower triangle
+        upper = list(continuous = "density", combo = "box_no_facet"), 
+        lower = list(continuous = wrap(lowerFn, method = "lm", formula = y ~ x), combo = "dot_no_facet"))
+
+```
+
+**Scatter Plot Matrix Analysis**
+
+-   In the case of `answer_time ~ personnel` and `time_per_call ~ personnel`, the data points are mostly clustered around a diagonal line, which may indicate a strong correlation between the two variables. However, `answer_time personnel` has negative correlation and `time_per_call ~ personnel` has positive correlation.
+-   In constrast, in `call_per_hour ~ personnel` the data points have a mostly random distribution, which indicates no correlation or weak correlation between the two variables.
+
+Another way to visualize this is with the `corrplot` function. It provides a way to visualize the pairwise correlation coefficients among a set of variables as a matrix of colored cells, with each cell representing the correlation between two variables. Here, I can add the correlation coefficient to the plot (could've done so in the Scatter Plot Matrix too tho).
+
+**Note**: A rule of thumb is that a correlation between two variables is considered to be strong when the absolute value of the correlation coefficient (r) is greater than 0.75. However, it's important to note that the cutoffs for what is considered a strong, moderate, or weak correlation may vary depending on the field of study and the specific context of the data being analyzed.
+
+```{r plot-correlogram}
+# Calculate the correlation matrix for the call center data
+corr_matrix <- cor(call_center)
+
+# Create a mixed-type correlation plot using the corrplot package
+corrplot.mixed(corr_matrix, lower.col = "black", number.cex = 2)
+```
+
+In our case, I will consider $ |r| > 0.6$  to be considered significant. Therefore, I will remove the variable `calls_per_hour` from the analysis since `personnel` is not a good predictor for this variable.
+
+# Check for Correlations
+
+The correlation coefficient and the coefficient of determination are both measures of the relationship between two variables in a statistical model.
+
+-   The **correlation coefficient** is denoted by the symbol r, and it measures the strength and direction of the linear relationship between two variables.
+
+-   The **coefficient of determination**, denoted by the symbol R2, is the proportion of the variance in the dependent variable that is explained by the independent variable(s) in a regression model.
+
+I will create a small dataframe with both coefficients. Each row represent a variable (Y) that I want to predict using `personnel`.
+
+**Correlation Analysis**
+
+-    As mentioned before, `answer_time personnel` has negative correlation (-0.94) and `time_per_call ~ personnel` has positive correlation (0.66).
+
+-    From R-square we can conclude the following:
+
+        - `personnel` represents 88.7% of the variance of `answer_time`
+        - `personnel` represents 43.2% of the variance of `time_per_call`
+
+```{r coefficients-dataframe}
+# Create a data frame with two columns using the dplyr package
+corr_df <- data_frame(correlation_coefficient = round(corr_matrix[-1, "personnel"], digits = 3),
+                      determination_coefficient = round(corr_matrix[-1, "personnel"]^2, digits = 3))
+
+# Set the row names of the data frame to the row names of the correlation matrix
+row.names(corr_df) <- rownames(corr_matrix)[-1]
+
+# Return the correlation data frame with row names assigned
+corr_df
+```
+
+# First Regression
+
+Let's start with our first model `answer_time ~ personnel`. After creating the model we can apply the function `summary()` to get a summary which includes:
+
+-   The residual standard error, which is an estimate of the variability of the errors
+-   The coefficients for the predictor variables (i.e., slope and intercept)
+-   The t-values, and p-values for each coefficient
+-   The standard error
+-   The R-squared
+-   The F-statistic and p-value for the overall significance of the model
+
+```{r fit-model}
+# Fit a linear regression model
+mod01 <- lm(answer_time ~ personnel, data = call_center)
+
+# Print summary of the model fit
+summary(mod01)
+```
+
+**Model Selection Analysis**
+
+-   **Residuals**: We will use the residuals to evaluate the model later.
+
+-   **Coefficients**: The **intercept** term in a linear regression model represents the estimated mean value of the response variable when all predictor variables are equal to zero . However, this interpretation may not always be applicable or meaningful, depending on the context of the model and the nature of the predictor variables. In contrast, the **slope** is interpreted as the change in the response variable associated with a one-unit change in the predictor variable, holding all other predictor variables constant.
+
+    -   The intercept is 251.61 (seconds), which is interpreted as the average answer time when there is no personnal. As this make no sense in our context, it may be more appropriate to interpret the intercept as a baseline value that is adjusted by the predictor variables.
+
+    -   The slope is -2.015 (seconds), which is interpreted as the average change in answer time associated with a one-unit change in the number of personnel. In other words, if we add one person to the shift, the answer time will be reduced by roughly 2 seconds.
+
+-   **p-values**: Both intercept and slope have a $pvalue < 0.05$, which are considered statistically significant, meaning that it is unlikely that the observed effect is due to chance.
+
+-   **Residual Standard Error**: it is a measure of the amount of variability in the response variable that is not explained by the predictor variables. Specifically, it is the average amount that the observed values for the response variable deviate from the predicted values, in units of the response variable's measurement. In this context, is tells us that the real mean for a predictor value can be above 4.44 seconds or below 4.44 seconds of the predicted value by the model.
+
+-   **Rsquared**: The model represents 87.65% of the variance of answer_time
+
+-   **F-statistic** Like the v-values associated with the coefficients, the model has a $pvalue < 0.05$, which is considered statistically significant, meaning the model is a better predictor than simply using the mean to predict.
+
+# Evaluate Regression
+
+The main objective is to make sure that your regression model is reliable and correctly reflects the connections in your data. To achieve this, I will bring attention back to the fundamental assumptions that form the basis of the multiple linear regression model.
+
+-   **Residuals**: The error term $\epsilon$ , which defines the departure of any observation from the fitted mean-outcome model, is assumed to be normally distributed with a mean of zero and a constant variance denoted with $\sigma^2$.
+-   I will use the following tools:
+    -   A scatterplot of the *observed-minus-fitted* raw residuals on the vertical axis against their corresponding fitted-model values from the regression. If the assumptions concerning are valid, then the ei should appear randomly scattered around zero (since the errors aren't assumed to be related in any way to the value of the response).
+    -   A QQ plot, where gray diagonal line represents the true normal quantiles, and the plotted points are the corresponding numeric quantiles of the estimated regression errors. Normally distributed data should lie close to the straight line.
+    -   A histogram of the residuals.
+
+```{r plot-residuals, fig.width = 15, fig.height = 6}
+# Divide the plotting region into four subplots
+par(mfrow = c(1,3))
+
+# Create the plots
+plot(mod01, which = 2)
+plot(mod01, which = 1)
+hist(mod01$residuals, freq = FALSE, breaks = 15, main = "Histogram of Residuals")
+
+# Add the density line to the first plot
+lines(density(mod01$residuals), col = "blue", lwd = 2)
+```
+
+We can formally check the normality of the residuals using an analytic approach. The Shapiro-Wilk test is a statistical test used to determine whether a dataset has a normal distribution. The null hypothesis of the test is that the data is normally distributed. If the p-value of the test is less than the chosen significance level (usually 0.05), then we reject the null hypothesis and conclude that the data is not normally distributed.
+
+$$ \begin{align*}
+    H_{0}: &\text{ The data follows a normal distribution.} \\
+    H_{1}: &\text{ The data does not follow a normal distribution.}
+\end{align*}$$
+
+```{r normality-test}
+# Test for normality using the Shapiro-Wilk test
+shapiro.test(mod01$residuals)
+```
+
+From the graphs and the normality test, we can conclude that our model assumptions are met and that the model is valid. This means that we can trust the results of our analysis and make meaningful inferences about the relationship between the variables. However, it is important to note that while our model may be statistically significant, it does not necessarily imply a causal relationship between the variables.
+
+# Conclusion
+
+In conclusion, correlation analysis and linear regression models are powerful tools for analyzing relationships between variables and making predictions. The choice of using these tools in statistics or data science depends on the research question and the available data. In this notebook, we applied these techniques to the HelloHub Call Center data and found that the number of personnel has a significant effect on the answer time for telephone calls.
+
+# Theory {#theory}
 
 ## Correlation Coefficient Overview
 
-**Correlation** is a term used to indicate whether there is a relationship between the values of different measurements. - A **positive correlation** means that high values of one measurement are associated with higher values of the other measurement (both rise together). So, the two variables are said t be directly proportional. - A **negative correlation** means that higher values of one measurement are associated with lower values of another (as one goes up, the other goes down). So, the two variables are said t be inversely proportional. - It is extremely important to highlight that correlation itself **does not** imply a cause-effect relationship. If you want to draw cause-and-effect relationships you need to run an experiment (DOX). - Sometimes an apparent correlation can be coincidence. - Other times, the two variables are both related to an underlying cause --- called a **lurking variables**--- that is not included in your analysis. On the other hand, a **confounding variable** is a variable that is not among the explanatory or response variables and yet may influence the interpretation of relationships among those variables.
+**Correlation** is a term used to indicate whether there is a relationship between the values of different measurements. - A **positive correlation** means that high values of one measurement are associated with higher values of the other measurement (both rise together). So, the two variables are said t be directly proportional. - A **negative correlation** means that higher values of one measurement are associated with lower values of another (as one goes up, the other goes down). So, the two variables are said t be inversely proportional. - It is extremely important to highlight that correlation itself **does not** imply a cause-effect relationship. If you want to draw cause-and-effect relationships you need to run an experiment (DOX). - Sometimes an apparent correlation can be coincidence. - Other times, the two variables are both related to an underlying cause called a **lurking variables** that is not included in your analysis. On the other hand, a **confounding variable** is a variable that is not among the explanatory or response variables and yet may influence the interpretation of relationships among those variables.
 
 A **lurking variable** is a variable that is hidden or not included in an analysis, but impacts the relationship being analyzed. Some lurking variables hide real relationships, while others can make a false relationship appear to exist. Either way, lurking variables create misleading study results. It's very important to identify what lurking variables in statistics.
 
@@ -78,32 +352,9 @@ There are several assumptions for the linear regression model to be appropriate 
 For the variables:
 
 -   **Linearity**: The relationship between the **independent** and **dependent** variables is linear, meaning that the change in the dependent variable is proportional to the change in the independent variable(s).
-
 -   **No Multicollinearity**: There should be no high correlation between the **independent** variables. This assumption is important because if there is high correlation between the independent variables, it becomes difficult to estimate the effect of each variable separately.
 
 For the residuals:
 
 -   **Homoscedasticity**: The variance of the errors is constant across all levels of the independent variables. This assumption is also called the constant variance assumption.
-
--   **Normality**: The errors are normally distributed. This means that the distribution of the errors should be a bell-shaped curve centered around zero. Therefore: \$ \epsilon \sim N(0, \sigma) \$
-
-# Data
-
-A fictional call center is interested in knowing the relationship between the number of personnel and some variables that measure their performance such as average answer time, average calls per hour, and average time per call. Data were simulated to represent 200 shifts. The project is focusing on the answer time for telephone calls to the center, the time spent on each call, and the incoming call volume. According to experience, a potential predictor might be the number of personnel available in a shift. We can visualize the process with the following diagram.
-
-```{r libraries, warning = FALSE, message = FALSE}
-# Load libraries
-library(ggplot2)
-library(GGally)
-library(dplyr)
-library(readr)
-library(MASS)
-options(warn = -1)
-
-# Import data set
-call_center <- read_csv(file = "data/call_center_regression.csv",
-                        show_col_types = FALSE)
-
-# Print the structure of the 'call_center' data frame
-str(call_center)
-```
+-   **Normality**: The errors are normally distributed. This means that the distribution of the errors should be a bell-shaped curve centered around zero. Therefore: \$\epsilon \sim N(0, \sigma) \$
